@@ -1,10 +1,12 @@
-var server = require("http").createServer();
-const validOrigins = ["https://launch.playcanvas.com", "https://playcanv.as"];
-const PORT = process.env.PORT || 3000; // Default to 3000 if env var not set
-const HOST = process.env.HOST || '0.0.0.0'; // Default to 0.0.0.0
 
-var countPlayers = 0;
-var maxPlayers = 2;
+const http = require("http");
+const server = http.createServer();
+const validOrigins = ["https://launch.playcanvas.com", "https://playcanv.as"];
+const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
+
+let countPlayers = 0;
+const maxPlayers = 2;
 
 const io = require("socket.io")(server, {
   cors: {
@@ -13,7 +15,7 @@ const io = require("socket.io")(server, {
   },
 });
 
-var players = {};
+const players = {};
 
 function Player(id) {
   this.id = id;
@@ -27,51 +29,49 @@ function Player(id) {
 }
 
 io.on("connection", (socket) => {
-  socket.on("initialize", function () {
+  socket.on("initialize", () => {
     if (countPlayers >= maxPlayers) {
       socket.emit("roomFull", { message: "Room is full. Try again later." });
       return;
     }
     countPlayers++;
-    var id = socket.id;
-    var newPlayer = new Player(id);
+    const id = socket.id;
+    const newPlayer = new Player(id);
     players[id] = newPlayer;
 
     socket.emit("playerData", {
-      id: id,
-      players: players,
-      countPlayers: countPlayers,
+      id,
+      players,
+      countPlayers,
     });
     socket.broadcast.emit("playerJoined", {
-      newPlayer: newPlayer,
-      countPlayers: countPlayers,
+      newPlayer,
+      countPlayers,
     });
   });
 
-  socket.on("positionUpdate", function (data) {
-    if (!players[data.id]) return;
-    players[data.id].x = data.x;
-    players[data.id].y = data.y;
-    players[data.id].z = data.z;
-    players[data.id].rx = data.rx;
-    players[data.id].ry = data.ry;
-    players[data.id].rz = data.rz;
-
-    socket.broadcast.emit("playerMoved", data);
+  socket.on("positionUpdate", (data) => {
+    const player = players[socket.id];
+    if (!player) return;
+    player.x = data.x;
+    player.y = data.y;
+    player.z = data.z;
+    player.rx = data.rx;
+    player.ry = data.ry;
+    player.rz = data.rz;
+    socket.broadcast.emit("playerMoved", { ...data, id: socket.id });
   });
 
-  socket.on("disconnect", function () {
+  socket.on("disconnect", () => {
     if (!players[socket.id]) return;
     delete players[socket.id];
-    // Update clients with the new player killed
     countPlayers--;
     socket.broadcast.emit("killPlayer", {
       sid: socket.id,
-      countPlayers: countPlayers,
+      countPlayers,
     });
   });
 });
 
-console.log("Server started.");
+console.log(`Server started. Listening on ${HOST}:${PORT}`);
 server.listen(PORT, HOST);
-console.log(`Listening on ${HOST}:${PORT}`);
