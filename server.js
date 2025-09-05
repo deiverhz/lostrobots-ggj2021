@@ -1,5 +1,7 @@
 var server = require("http").createServer();
 const validOrigins = ["https://launch.playcanvas.com", "https://playcanv.as"];
+const PORT = process.env.PORT || 3000; // Default to 3000 if env var not set
+const HOST = process.env.HOST || '0.0.0.0'; // Default to 0.0.0.0
 
 var countPlayers = 0;
 var maxPlayers = 2;
@@ -71,4 +73,5 @@ io.on("connection", (socket) => {
 });
 
 console.log("Server started.");
-server.listen(3000);
+server.listen(PORT, HOST);
+console.log(`Listening on ${HOST}:${PORT}`);
