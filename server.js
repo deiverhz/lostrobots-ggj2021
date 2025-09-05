@@ -26,6 +26,10 @@ function Player(id) {
 
 io.on("connection", (socket) => {
   socket.on("initialize", function () {
+    if (countPlayers >= maxPlayers) {
+      socket.emit("roomFull", { message: "Room is full. Try again later." });
+      return;
+    }
     countPlayers++;
     var id = socket.id;
     var newPlayer = new Player(id);
